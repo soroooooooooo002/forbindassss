@@ -21,6 +21,16 @@ from telethon.tl.types import DocumentAttributeVideo
 
 
 # ============================================================
+# SAFE MOVIEPY IMPORT
+# ============================================================
+
+try:
+    from moviepy.editor import VideoFileClip
+except ImportError:
+    from moviepy.video.io.VideoFileClip import VideoFileClip
+
+
+# ============================================================
 # CONFIGURATION
 # ============================================================
 
@@ -384,10 +394,11 @@ def download_single(video_url, video_file, headers):
 
 
 # ============================================================
-# VIDEO INFORMATION
+# VIDEO INFORMATION (WITH MOVIEPY FALLBACK)
 # ============================================================
 
 def probe_video(video_file):
+    # Try ffprobe first
     try:
         result = subprocess.run(
             [
@@ -408,10 +419,24 @@ def probe_video(video_file):
         duration = int(float((data.get("format") or {}).get("duration") or 0))
         width = int(stream.get("width") or 0)
         height = int(stream.get("height") or 0)
-        return duration, width, height
+        if duration > 0 and width > 0:
+            log(f"[VIDEO] FFprobe Metadata: {format_duration(duration)} | {width}x{height}")
+            return duration, width, height
+    except Exception:
+        pass
+
+    # Fallback to MoviePy if ffprobe fails or is missing
+    try:
+        log("[VIDEO] FFprobe unavailable, using MoviePy fallback...")
+        with VideoFileClip(str(video_file)) as clip:
+            duration = int(clip.duration or 0)
+            width = int(clip.w or 1280)
+            height = int(clip.h or 720)
+            log(f"[VIDEO] MoviePy Metadata: {format_duration(duration)} | {width}x{height}")
+            return duration, width, height
     except Exception as exc:
-        log(f"[VIDEO] Metadata unavailable: {exc}")
-        return 0, 0, 0
+        log(f"[VIDEO] All metadata extraction failed: {exc}")
+        return 60, 1280, 720
 
 
 # ============================================================
