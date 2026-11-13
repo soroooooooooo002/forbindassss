@@ -67,7 +67,10 @@ DOWNLOAD_WORKERS = max(1, min(12, int(os.getenv("DOWNLOAD_WORKERS", "1"))) )
 DOWNLOAD_CHUNK_MB = max(4, min(32, int(os.getenv("DOWNLOAD_CHUNK_MB", "8"))))
 DOWNLOAD_CHUNK = DOWNLOAD_CHUNK_MB * 1024 * 1024
 
-UPLOAD_PART_SIZE_KB = 256
+UPLOAD_PART_SIZE_KB = max(
+    128,
+    min(512, int(os.getenv("UPLOAD_PART_SIZE_KB", "512")))
+)
 
 WORK_DIR = Path(os.getenv("WORK_DIR", "temp_downloads"))
 WORK_DIR.mkdir(parents=True, exist_ok=True)
